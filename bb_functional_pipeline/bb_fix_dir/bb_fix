@@ -8,28 +8,35 @@
 #
 #   SHCOPYRIGHT
 
-FSL_FIXDIR=$( cd $(dirname $0) ; pwd)
-export FSL_FIXDIR
+. $BB_BIN_DIR/bb_pipeline_tools/bb_set_header 
+
 # All fix settings are held in the settings.sh file - edit this file to suit your setup
 . ${FSL_FIXDIR}/settings.sh
+origDir=`pwd`
 
 #############################################################
 
 [ "$1" = "" ] && exit
 
-cd $1/fMRI/rfMRI.ica
+if [ -d $1/fMRI/rfMRI.ica ] ; then 
 
-imcp ../../T1/T1_fast/T1_brain_pveseg reg/highres_pveseg
+    cd $1/fMRI/rfMRI.ica
 
-invwarp --ref=reg/example_func -w reg/example_func2standard_warp -o reg/standard2example_func_warp
+    ${FSLDIR}/bin/imcp ${origDir}/$1/T1/T1_fast/T1_brain_pveseg reg/highres_pveseg
+    # ${FSLDIR}/bin/imcp $1/T1/T1_fast/T1_brain_pveseg reg/highres_pveseg
+    ${FSLDIR}/bin/invwarp --ref=reg/example_func -w reg/example_func2standard_warp -o reg/standard2example_func_warp
+    ${FSL_FIXDIR}/fix . ${FSL_FIXDIR}/training_files/${TRAINING_FILE} 30 -m -h 100
 
-echo "Running fix..."
-${FSL_FIXDIR}/fix . ${FSL_FIXDIR}/training_files/${TRAINING_FILE} 20 -m -h 100
-echo "Done."
+    mkdir -p reg_standard
+    # ${FSLDIR}/bin/applywarp --ref=reg/standard --in=filtered_func_data_clean --out=reg_standard/filtered_func_data_clean --warp=reg/example_func2standard_warp --interp=spline
+    ${FSLDIR}/bin/applywarp --ref=${FSLDIR}/data/standard/MNI152_T1_2mm.nii.gz --in=filtered_func_data_clean --out=reg_standard/filtered_func_data_clean --warp=reg/example_func2standard_warp --interp=spline
 
-mkdir -p reg_standard
-applywarp --ref=reg/standard --in=filtered_func_data_clean --out=reg_standard/filtered_func_data_clean --warp=reg/example_func2standard_warp --interp=spline
+    ${FSLDIR}/bin/fslmaths reg_standard/filtered_func_data_clean -mas $templ/MNI152_T1_2mm_brain_mask_bin reg_standard/filtered_func_data_clean
+    ${FSLDIR}/bin/fslmaths reg_standard/filtered_func_data_clean -Tstd -bin reg_standard/filtered_func_data_clean_stdmask
 
-fslmaths reg_standard/filtered_func_data_clean -mas $BBDIR/fbp/templates/MNI152_T1_2mm_brain_mask_bin reg_standard/filtered_func_data_clean
-fslmaths reg_standard/filtered_func_data_clean -Tstd -bin reg_standard/filtered_func_data_clean_stdmask
+    cd $origDir
+else
+    echo "No rfMRI directory for subject $1"
+fi
 
+. $BB_BIN_DIR/bb_pipeline_tools/bb_set_footer 
