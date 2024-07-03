@@ -123,4 +123,4 @@ export MATLAB_COMPILER_RUNTIME="$MCROOT/$MCRV"
 export XAPPLRESDIR="$MCROOT/$MCRV/X11/app-defaults"
 
 # source activate $SOFTDIR/software/env
-source activate $SOFTDIR/software/env
+# source activate $SOFTDIR/software/env
